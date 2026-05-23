@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: synthara-research
+  ai:
+    mcp:
+      client:
+        stdio:
+          connections:
+            brave-search-mcp:
+              command: npx
+              args:
+                - -y
+                - "@modelcontextprotocol/server-brave-search"
+              env:
+                BRAVE_API_KEY: ${BRAVE_API_KEY}
+  datasource:
+    url: jdbc:postgresql://localhost:5432/synthara_research
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 1
+
+blog-agent:
+  output-dir: blog-posts
+  number-of-keywords: 5
+
+synthara:
+  research:
+    output-dir: reports
+    max-sources: 50
+    parallel-research: true
+    cache-ttl-hours: 24
+
+embabel:
+  agent:
+    platform:
+      models:
+        openai:
+          api-key: ${OPENAI_API_KEY}
+    logging:
+      personality: professional
+  models:
+    default-llm: claude-sonnet-4-6
+    llms:
+      reviewer: claude-opus-4-6

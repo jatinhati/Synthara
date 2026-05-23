@@ -1,0 +1,11 @@
+target/
+*.jar
+*.class
+.idea/
+*.iml
+.git/
+.gitattributes
+.gitignore
+node_modules/
+.env
+*.md
