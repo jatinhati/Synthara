@@ -7,7 +7,7 @@ An AI-powered blog post writer and reviewer built with Spring Boot and the [Emba
 ```bash
 export ANTHROPIC_API_KEY=your-anthropic-key
 export OPENAI_API_KEY=your-openai-key
-export BRAVE_API_KEY=your-brave-key
+export TAVILY_API_KEY=your-tavily-key
 ./mvnw spring-boot:run
 ```
 
@@ -18,8 +18,8 @@ The app launches an interactive shell. Type `x "your topic"` and the agent will 
 - Java 23+
 - [Anthropic API key](https://console.anthropic.com/) — used by the default and reviewer LLMs (`claude-sonnet-4-6`, `claude-opus-4-6`)
 - [OpenAI API key](https://platform.openai.com/api-keys) — referenced by the platform config
-- [Brave Search API key](https://brave.com/search/api/) — used by the web research tool (free tier works)
-- Node.js / `npx` — required so the Brave Search MCP server can be launched
+- [Tavily Search API key](https://tavily.com) — used by the web research tool (free tier works)
+- Node.js / `npx` — required so the Tavily Search MCP server can be launched
 
 ## Configuration
 
@@ -29,7 +29,7 @@ Configuration lives in `src/main/resources/application.yaml`:
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | Anthropic API key (env variable) |
 | `OPENAI_API_KEY` | — | OpenAI API key (env variable) |
-| `BRAVE_API_KEY` | — | Brave Search API key (env variable) |
+| `TAVILY_API_KEY` | — | Tavily Search API key (env variable) |
 | `blog-agent.output-dir` | `blog-posts` | Directory where finished posts are saved |
 | `blog-agent.number-of-keywords` | `5` | Max keywords generated for front matter |
 | `embabel.models.default-llm` | `claude-sonnet-4-6` | Model used for drafting, research, TLDR, and front matter |
@@ -39,7 +39,7 @@ Configuration lives in `src/main/resources/application.yaml`:
 
 The `BlogWriterAgent` defines a five-stage Embabel pipeline. Each stage is an `@Action` method whose input/output types let Embabel chain them automatically.
 
-1. **`researchTopic`** — Uses the LLM with `CoreToolGroups.WEB` (a tool group backed by the Brave Search MCP server) to research the topic on the web before any writing happens.
+1. **`researchTopic`** — Uses the LLM with `CoreToolGroups.WEB` (a tool group backed by the Tavily Search MCP server) to research the topic on the web before any writing happens.
 2. **`writeDraft`** — Drafts a practical, beginner-friendly Markdown post using the research findings.
 3. **`reviewDraft`** — Sends the draft to a stronger reviewer LLM for technical editing and tighter writing.
 4. **`addTldr`** — Generates a one-or-two sentence TLDR and prepends it to the post.
@@ -49,7 +49,7 @@ The `BlogWriterAgent` defines a five-stage Embabel pipeline. Each stage is an `@
 
 This project demonstrates both ways to give an LLM tools in Embabel:
 
-- **MCP tools** — `researchTopic` uses `.withToolGroup(CoreToolGroups.WEB)`. Embabel resolves this against the Brave Search MCP server configured under `spring.ai.mcp.client.stdio.connections` in `application.yaml`. The MCP server is launched on demand via `npx`.
+- **MCP tools** — `researchTopic` uses `.withToolGroup(CoreToolGroups.WEB)`. Embabel resolves this against the Tavily Search MCP server configured under `spring.ai.mcp.client.stdio.connections` in `application.yaml`. The MCP server is launched on demand via `npx`.
 - **Custom Java tools** — `ReadingStatsTool` is a plain Spring `@Component` with one method annotated `@LlmTool`. The `addFrontMatter` action wires it in with `.withToolObject(readingStatsTool)`. No MCP, no external service — just Java.
 
 Both approaches surface to the LLM as standard tool calls; the LLM decides when to invoke them.
