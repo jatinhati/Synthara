@@ -53,37 +53,38 @@ public class ResearchWorkflow {
 
         try {
             log.info("=== WORKFLOW STARTED: {} ===", id);
-            state = exec(state, ResearchWorkflowState.ResearchStage.RESEARCH_TOPIC, () -> {
+            final ResearchWorkflowState initialState = state;
+            final ResearchWorkflowState s1 = exec(initialState, ResearchWorkflowState.ResearchStage.RESEARCH_TOPIC, () -> {
                 ResearchedTopic r = researchTopicStage.research(userPrompt);
-                return state.withResearchedTopic(r);
+                return initialState.withResearchedTopic(r);
             });
-            state = exec(state, ResearchWorkflowState.ResearchStage.SOURCE_EXTRACTION, () -> {
-                StructuredSources s = sourceExtractionStage.extract(state.researchedTopic());
-                return state.withStructuredSources(s);
+            final ResearchWorkflowState s2 = exec(s1, ResearchWorkflowState.ResearchStage.SOURCE_EXTRACTION, () -> {
+                StructuredSources s = sourceExtractionStage.extract(s1.researchedTopic());
+                return s1.withStructuredSources(s);
             });
-            state = exec(state, ResearchWorkflowState.ResearchStage.COMPETITOR_ANALYSIS, () -> {
-                CompetitorAnalysis c = competitorAnalysisStage.analyze(state.structuredSources());
-                return state.withCompetitorAnalysis(c);
+            final ResearchWorkflowState s3 = exec(s2, ResearchWorkflowState.ResearchStage.COMPETITOR_ANALYSIS, () -> {
+                CompetitorAnalysis c = competitorAnalysisStage.analyze(s2.structuredSources());
+                return s2.withCompetitorAnalysis(c);
             });
-            state = exec(state, ResearchWorkflowState.ResearchStage.SWOT_ANALYSIS, () -> {
-                SwotAnalysis s = swotAnalysisStage.analyze(state.competitorAnalysis());
-                return state.withSwotAnalysis(s);
+            final ResearchWorkflowState s4 = exec(s3, ResearchWorkflowState.ResearchStage.SWOT_ANALYSIS, () -> {
+                SwotAnalysis s = swotAnalysisStage.analyze(s3.competitorAnalysis());
+                return s3.withSwotAnalysis(s);
             });
-            state = exec(state, ResearchWorkflowState.ResearchStage.EXECUTIVE_SUMMARY, () -> {
-                ExecutiveSummary e = executiveSummaryStage.summarize(state.swotAnalysis());
-                return state.withExecutiveSummary(e);
+            final ResearchWorkflowState s5 = exec(s4, ResearchWorkflowState.ResearchStage.EXECUTIVE_SUMMARY, () -> {
+                ExecutiveSummary e = executiveSummaryStage.summarize(s4.swotAnalysis());
+                return s4.withExecutiveSummary(e);
             });
-            state = exec(state, ResearchWorkflowState.ResearchStage.REPORT_GENERATION, () -> {
-                MarkdownReport m = reportGenerationStage.generate(state.executiveSummary());
-                return state.withMarkdownReport(m);
+            final ResearchWorkflowState s6 = exec(s5, ResearchWorkflowState.ResearchStage.REPORT_GENERATION, () -> {
+                MarkdownReport m = reportGenerationStage.generate(s5.executiveSummary());
+                return s5.withMarkdownReport(m);
             });
-            state = exec(state, ResearchWorkflowState.ResearchStage.PDF_EXPORT, () -> {
-                PublishedReport p = pdfExportStage.export(state.markdownReport());
-                return state.withPublishedReport(p);
+            final ResearchWorkflowState s7 = exec(s6, ResearchWorkflowState.ResearchStage.PDF_EXPORT, () -> {
+                PublishedReport p = pdfExportStage.export(s6.markdownReport());
+                return s6.withPublishedReport(p);
             });
-            state = exec(state, ResearchWorkflowState.ResearchStage.SEMANTIC_STORAGE, () -> {
-                StoredResearchMemory m = semanticMemoryStage.store(state.publishedReport(), state.executiveSummary());
-                return state.withStoredMemory(m);
+            state = exec(s7, ResearchWorkflowState.ResearchStage.SEMANTIC_STORAGE, () -> {
+                StoredResearchMemory m = semanticMemoryStage.store(s7.publishedReport(), s7.executiveSummary());
+                return s7.withStoredMemory(m);
             });
             log.info("=== WORKFLOW COMPLETED: {} ===", id);
         } catch (Exception e) {

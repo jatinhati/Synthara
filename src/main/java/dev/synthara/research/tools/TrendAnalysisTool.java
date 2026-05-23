@@ -1,7 +1,7 @@
 package dev.synthara.research.tools;
 
-import com.embabel.agent.tool.LlmTool;
-import com.embabel.agent.tool.LlmTool.Param;
+import com.embabel.agent.api.annotation.LlmTool;
+import com.embabel.agent.api.annotation.LlmTool.Param;
 import org.springframework.stereotype.Component;
 
 import java.util.*;

@@ -1,34 +1,113 @@
 package dev.synthara.research.workflow;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.synthara.research.records.CompetitorAnalysis;
 import dev.synthara.research.records.SwotAnalysis;
 import dev.synthara.research.records.SwotAnalysis.SwotItem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class SwotAnalysisStage {
+    private static final Logger log = LoggerFactory.getLogger(SwotAnalysisStage.class);
+    private final OpenRouterLlmService llmService;
+    private final ObjectMapper objectMapper;
 
+    public SwotAnalysisStage(OpenRouterLlmService llmService, ObjectMapper objectMapper) {
+        this.llmService = llmService;
+        this.objectMapper = objectMapper;
+    }
+
+    @SuppressWarnings("unchecked")
     public SwotAnalysis analyze(CompetitorAnalysis competitorAnalysis) {
-        return new SwotAnalysis(competitorAnalysis.topic(),
-            List.of(
-                new SwotItem("Rapid AI integration across all major browsers", "All top browsers launched AI features 2025-2026", "HIGH", "technology"),
-                new SwotItem("Multiple AI approaches creating market diversity", "Each browser differentiates AI strategy", "HIGH", "market"),
-                new SwotItem("Growing user acceptance of AI in browsing", "Adoption increasing 40% YoY", "MEDIUM", "market")),
-            List.of(
-                new SwotItem("Privacy concerns with AI data collection", "Users concerned about data sent to AI providers", "HIGH", "regulatory"),
-                new SwotItem("AI feature fragmentation across browsers", "Inconsistent AI experiences", "MEDIUM", "technology"),
-                new SwotItem("Limited cross-platform AI sync", "AI features tied to specific ecosystems", "MEDIUM", "technology")),
-            List.of(
-                new SwotItem("Enterprise AI browsing is underserved", "Few browsers offer enterprise-grade AI governance", "HIGH", "market"),
-                new SwotItem("On-device AI processing becoming viable", "Local LLMs enable privacy-preserving AI", "HIGH", "technology"),
-                new SwotItem("Vertical AI browsing for specific industries", "Healthcare, legal, finance need specialized AI", "MEDIUM", "market")),
-            List.of(
-                new SwotItem("Regulatory challenges (EU AI Act)", "May restrict AI data collection practices", "HIGH", "regulatory"),
-                new SwotItem("Google Chrome AI catch-up", "65% market share gives massive distribution advantage", "HIGH", "market"),
-                new SwotItem("AI model costs and latency", "Real-time inference requires expensive infrastructure", "MEDIUM", "technology")),
-            "Differentiate through a specific AI approach (privacy-first, enterprise-ready, multi-LLM, or UX innovation) rather than competing on all dimensions. Enterprise segment is the largest opportunity."
+        log.info("Starting dynamic SWOT Analysis for topic: {}", competitorAnalysis.topic());
+
+        String competitorsText = competitorAnalysis.competitors().stream()
+            .map(c -> String.format("- **%s**: %s. Strengths: %s. Weaknesses: %s",
+                c.name(), c.description(), String.join(", ", c.strengths()), String.join(", ", c.weaknesses())))
+            .collect(Collectors.joining("\n"));
+
+        String prompt = String.format(
+            "You are a strategic management consultant. Perform a SWOT analysis for the market and technology context of the topic '%s'.\n\n" +
+            "Competitors Context:\n%s\n\n" +
+            "Generate a highly detailed SWOT analysis and strategic recommendation. Output a strictly valid JSON object matching the schema below. " +
+            "DO NOT include any explanation or intro text. Only output the JSON object. Do not wrap in markdown code blocks.\n\n" +
+            "JSON Schema:\n" +
+            "{\n" +
+            "  \"strengths\": [\n" +
+            "    { \"description\": \"Strength description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "  ],\n" +
+            "  \"weaknesses\": [\n" +
+            "    { \"description\": \"Weakness description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "  ],\n" +
+            "  \"opportunities\": [\n" +
+            "    { \"description\": \"Opportunity description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "  ],\n" +
+            "  \"threats\": [\n" +
+            "    { \"description\": \"Threat description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "  ],\n" +
+            "  \"strategicRecommendation\": \"Specific strategic recommendation to gain competitive advantage\"\n" +
+            "}",
+            competitorAnalysis.topic(), competitorsText
         );
+
+        try {
+            log.info("Querying LLM for structured SWOT Analysis...");
+            String response = llmService.call(prompt);
+            if (response == null || response.isBlank()) {
+                throw new RuntimeException("LLM returned empty response");
+            }
+            response = response.trim();
+
+            if (response.startsWith("```")) {
+                response = response.replaceAll("^```json\\s*", "").replaceAll("^```\\s*", "").replaceAll("\\s*```$", "");
+            }
+
+            Map<String, Object> data = objectMapper.readValue(response, Map.class);
+
+            List<SwotItem> strengths = parseSwotItems((List<Map<String, Object>>) data.get("strengths"));
+            List<SwotItem> weaknesses = parseSwotItems((List<Map<String, Object>>) data.get("weaknesses"));
+            List<SwotItem> opportunities = parseSwotItems((List<Map<String, Object>>) data.get("opportunities"));
+            List<SwotItem> threats = parseSwotItems((List<Map<String, Object>>) data.get("threats"));
+
+            return new SwotAnalysis(
+                competitorAnalysis.topic(),
+                strengths,
+                weaknesses,
+                opportunities,
+                threats,
+                (String) data.getOrDefault("strategicRecommendation", "Focus on differentiation and scalability.")
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to generate dynamic SWOT analysis, returning fallback: {}", e.getMessage());
+            // Fallback
+            return new SwotAnalysis(
+                competitorAnalysis.topic(),
+                List.of(new SwotItem("Growing market demand", "Strong user adoption patterns", "HIGH", "market")),
+                List.of(new SwotItem("High barrier to entry", "Infrastructural complexities", "MEDIUM", "technology")),
+                List.of(new SwotItem("Niche specialization opportunities", "Healthcare/Legal industries", "HIGH", "market")),
+                List.of(new SwotItem("Regulatory tightening", "Increasing governance requirements", "HIGH", "regulatory")),
+                "Focus on compliance and industry-specific customization."
+            );
+        }
+    }
+
+    private List<SwotItem> parseSwotItems(List<Map<String, Object>> items) {
+        if (items == null) return List.of();
+        List<SwotItem> list = new ArrayList<>();
+        for (Map<String, Object> item : items) {
+            list.add(new SwotItem(
+                (String) item.getOrDefault("description", ""),
+                (String) item.getOrDefault("evidence", ""),
+                (String) item.getOrDefault("impact", "MEDIUM"),
+                (String) item.getOrDefault("category", "market")
+            ));
+        }
+        return List.copyOf(list);
     }
 }

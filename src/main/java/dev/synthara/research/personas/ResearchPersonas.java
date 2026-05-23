@@ -1,6 +1,6 @@
 package dev.synthara.research.personas;
 
-import com.embabel.agent.prompt.PromptContributor;
+import com.embabel.common.ai.prompt.PromptContributor;
 import com.embabel.agent.prompt.persona.RoleGoalBackstory;
 
 public abstract class ResearchPersonas {

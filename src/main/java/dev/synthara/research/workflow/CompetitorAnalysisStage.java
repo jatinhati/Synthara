@@ -1,60 +1,126 @@
 package dev.synthara.research.workflow;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.synthara.research.records.CompetitorAnalysis;
 import dev.synthara.research.records.CompetitorAnalysis.CompetitorProfile;
 import dev.synthara.research.records.StructuredSources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class CompetitorAnalysisStage {
+    private static final Logger log = LoggerFactory.getLogger(CompetitorAnalysisStage.class);
+    private final OpenRouterLlmService llmService;
+    private final ObjectMapper objectMapper;
 
+    public CompetitorAnalysisStage(OpenRouterLlmService llmService, ObjectMapper objectMapper) {
+        this.llmService = llmService;
+        this.objectMapper = objectMapper;
+    }
+
+    @SuppressWarnings("unchecked")
     public CompetitorAnalysis analyze(StructuredSources sources) {
-        String topic = sources.topic().toLowerCase();
-        var competitors = new ArrayList<CompetitorProfile>();
+        log.info("Starting dynamic Competitor Analysis for topic: {}", sources.topic());
 
-        if (topic.contains("ai") && (topic.contains("browser") || topic.contains("market"))) {
-            competitors.add(new CompetitorProfile("Microsoft Edge + Copilot",
-                "AI-powered browser with deep Copilot integration", "Free + Copilot Pro $20/mo",
-                List.of("Edge Copilot sidebar", "AI summarization", "Compose AI", "Contextual search"),
-                List.of("GPT-4 integration", "DALL-E", "Real-time analysis", "Multi-modal search"),
-                List.of("Microsoft 365", "Bing", "Azure OpenAI", "Windows"),
-                List.of("Deep OS integration", "Enterprise data access", "Strong AI", "Large user base"),
-                List.of("Windows-centric", "Privacy concerns", "Resource-heavy"),
-                "Free / $20/mo Pro", "30-35%", "https://microsoft.com/edge"));
+        String sourcesText = sources.sources().stream()
+            .map(s -> "- [" + s.title() + "](" + s.url() + "): " + s.summary())
+            .collect(Collectors.joining("\n"));
 
-            competitors.add(new CompetitorProfile("Opera + Aria",
-                "Browser with built-in Aria AI assistant", "Free (ad-supported)",
-                List.of("Aria AI sidebar", "AI image generation", "Built-in VPN", "Workspaces"),
-                List.of("Multi-LLM support", "Compose AI", "Image understanding", "Voice input"),
-                List.of("ChatGPT", "Google Gemini", "Cloudflare"),
-                List.of("Built-in AI by default", "Multi-LLM", "Privacy features", "Lightweight"),
-                List.of("Smaller market share", "Fewer extensions", "Less enterprise adoption"),
-                "Free", "3-5%", "https://opera.com"));
+        String prompt = String.format(
+            "You are an expert market research analyst. Based on the following research sources collected for the topic '%s', identify the 3-4 key competitors, major players, or solution approaches.\n\n" +
+            "Sources:\n%s\n\n" +
+            "Analyze these players and output a strictly valid JSON object matching the schema below. " +
+            "DO NOT include any explanation or intro text. Only output the JSON object. Do not wrap in markdown code blocks.\n\n" +
+            "JSON Schema:\n" +
+            "{\n" +
+            "  \"competitors\": [\n" +
+            "    {\n" +
+            "      \"name\": \"Name of competitor/approach\",\n" +
+            "      \"description\": \"Description of their offering\",\n" +
+            "      \"businessModel\": \"Their business model or commercial structure\",\n" +
+            "      \"keyFeatures\": [\"Feature A\", \"Feature B\"],\n" +
+            "      \"aiCapabilities\": [\"AI capability A\", \"AI capability B\"],\n" +
+            "      \"integrations\": [\"Integration A\", \"Integration B\"],\n" +
+            "      \"strengths\": [\"Strength A\", \"Strength B\"],\n" +
+            "      \"weaknesses\": [\"Weakness A\", \"Weakness B\"],\n" +
+            "      \"pricingModel\": \"Free / Commercial / etc\",\n" +
+            "      \"marketShare\": \"Estimated market share or positioning\",\n" +
+            "      \"website\": \"URL or Domain\"\n" +
+            "    }\n" +
+            "  ],\n" +
+            "  \"marketPositionSummary\": \"Short overall market landscape summary\",\n" +
+            "  \"keyDifferentiators\": \"Summary of core factors that differentiate these players\"\n" +
+            "}",
+            sources.topic(), sourcesText
+        );
 
-            competitors.add(new CompetitorProfile("Arc Browser",
-                "Innovative browser with AI-powered organization", "Free (invite)",
-                List.of("AI sidebar", "Spaces", "Easels", "Split view"),
-                List.of("AI tab organization", "Smart folders", "Page insights", "AI peek previews"),
-                List.of("Various AI APIs", "iCloud"),
-                List.of("Innovative UX", "Strong design", "AI-native", "Developer-friendly"),
-                List.of("Invite-only", "Mac/iOS only", "Small user base"),
-                "Free", "<1%", "https://arc.net"));
+        try {
+            log.info("Querying LLM for structured Competitor Analysis...");
+            String response = llmService.call(prompt);
+            if (response == null || response.isBlank()) {
+                throw new RuntimeException("LLM returned empty response");
+            }
+            response = response.trim();
+            
+            // Clean markdown blocks if present
+            if (response.startsWith("```")) {
+                response = response.replaceAll("^```json\\s*", "").replaceAll("^```\\s*", "").replaceAll("\\s*```$", "");
+            }
+            
+            Map<String, Object> data = objectMapper.readValue(response, Map.class);
+            List<Map<String, Object>> compList = (List<Map<String, Object>>) data.get("competitors");
+            
+            List<CompetitorProfile> profiles = new ArrayList<>();
+            for (Map<String, Object> item : compList) {
+                profiles.add(new CompetitorProfile(
+                    (String) item.getOrDefault("name", "Unknown Competitor"),
+                    (String) item.getOrDefault("description", ""),
+                    (String) item.getOrDefault("businessModel", ""),
+                    (List<String>) item.getOrDefault("keyFeatures", List.of()),
+                    (List<String>) item.getOrDefault("aiCapabilities", List.of()),
+                    (List<String>) item.getOrDefault("integrations", List.of()),
+                    (List<String>) item.getOrDefault("strengths", List.of()),
+                    (List<String>) item.getOrDefault("weaknesses", List.of()),
+                    (String) item.getOrDefault("pricingModel", ""),
+                    (String) item.getOrDefault("marketShare", ""),
+                    (String) item.getOrDefault("website", "")
+                ));
+            }
 
-            competitors.add(new CompetitorProfile("Brave + Leo AI",
-                "Privacy-focused browser with Leo AI assistant", "Free + Leo Premium $15/mo",
-                List.of("Leo AI assistant", "Ad blocker", "Tor integration", "Brave Wallet"),
-                List.of("Privacy-preserving AI", "Local processing", "No data collection"),
-                List.of("Various LLMs", "IPFS", "Tor"),
-                List.of("Strong privacy", "No data retention", "Fast", "Growing user base"),
-                List.of("Smaller AI feature set", "Limited integrations"),
-                "Free / $15/mo Premium", "2-3%", "https://brave.com"));
+            return new CompetitorAnalysis(
+                sources.topic(),
+                profiles,
+                Map.of(), // comparisonTable (can be left empty or synthesized)
+                (String) data.getOrDefault("marketPositionSummary", "Analysis complete."),
+                (String) data.getOrDefault("keyDifferentiators", "Differentiators identified.")
+            );
+
+        } catch (Exception e) {
+            log.error("Failed to generate dynamic competitor analysis, returning fallback: {}", e.getMessage());
+            // Fallback
+            return new CompetitorAnalysis(
+                sources.topic(),
+                List.of(new CompetitorProfile(
+                    "Standard Approach in " + sources.topic(),
+                    "Representative offering in the " + sources.topic() + " domain.",
+                    "Commercial enterprise licenses",
+                    List.of("Data integration", "Custom reporting"),
+                    List.of("Predictive scoring"),
+                    List.of("Cloud databases"),
+                    List.of("Established standards"),
+                    List.of("High cost"),
+                    "Enterprise contact sales",
+                    "N/A",
+                    "https://example.com"
+                )),
+                Map.of(),
+                "Market is emerging and highly competitive.",
+                "Primary differentiation lies in integration and feature completeness."
+            );
         }
-
-        return new CompetitorAnalysis(sources.topic(), List.copyOf(competitors), Map.of(),
-            "The AI browser market is led by Microsoft Edge with Copilot. Opera differentiates through multi-LLM support. "
-                + "Arc targets power users with UX innovation. Brave competes on privacy.",
-            "Microsoft's Copilot depth, Opera's multi-LLM, Arc's UX, Brave's privacy");
     }
 }

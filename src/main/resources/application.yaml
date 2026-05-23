@@ -2,17 +2,23 @@ spring:
   application:
     name: synthara-research
   ai:
+    openai:
+      base-url: https://openrouter.ai/api
+      api-key: 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
+      chat:
+        options:
+          model: nvidia/nemotron-3-nano-30b-a3b:free
     mcp:
       client:
         stdio:
           connections:
             tavily-search-mcp:
-              command: npx
+              command: npx.cmd
               args:
                 - -y
-                - "@modelcontextprotocol/server-tavily"
+                - "tavily-mcp"
               env:
-                TAVILY_API_KEY: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
+                TAVILY_API_KEY: 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
   datasource:
     url: jdbc:postgresql://localhost:5432/synthara_research
     username: ${DB_USERNAME:postgres}
@@ -28,17 +34,13 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD:synthara_secure_pass}
       timeout: 2000ms
       lettuce:
         pool:
           max-active: 8
           max-idle: 4
           min-idle: 1
-
-blog-agent:
-  output-dir: blog-posts
-  number-of-keywords: 5
 
 synthara:
   research:
@@ -49,13 +51,14 @@ synthara:
 
 embabel:
   agent:
+    logging:
+      personality: professional
     platform:
       models:
         openai:
-          api-key: ${OPENAI_API_KEY}
-    logging:
-      personality: professional
+          api-key: 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
+          base-url: https://openrouter.ai/api
   models:
-    default-llm: claude-sonnet-4-6
+    default-llm: "nvidia/nemotron-3-nano-30b-a3b:free"
     llms:
-      reviewer: claude-opus-4-6
+      reviewer: "nvidia/nemotron-3-nano-30b-a3b:free"

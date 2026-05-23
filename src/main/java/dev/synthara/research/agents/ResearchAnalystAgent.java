@@ -1,10 +1,9 @@
 package dev.synthara.research.agents;
 
-import com.embabel.agent.Agent;
-import com.embabel.agent.annotation.Action;
-import com.embabel.agent.annotation.AchievesGoal;
-import com.embabel.agent.core.DefaultLlm;
-import com.embabel.agent.exchange.UserInput;
+import com.embabel.agent.api.annotation.Agent;
+import com.embabel.agent.api.annotation.Action;
+import com.embabel.agent.api.annotation.AchievesGoal;
+import com.embabel.agent.domain.io.UserInput;
 import dev.synthara.research.records.*;
 import dev.synthara.research.workflow.ResearchWorkflow;
 import dev.synthara.research.workflow.ResearchWorkflowState;
@@ -21,21 +20,17 @@ public class ResearchAnalystAgent {
         this.workflow = workflow;
     }
 
-    @Action(inputType = UserInput.class, outputType = ResearchedTopic.class,
-        systemPrompt = "Research the given topic thoroughly using web search tools. Return the researched topic with all gathered sources.",
-        id = "research-topic")
-    public ResearchedTopic researchTopic(UserInput userInput, DefaultLlm ai) {
-        String prompt = userInput.value();
+    @Action(description = "Research the given topic thoroughly using web search tools. Return the researched topic with all gathered sources.")
+    public ResearchedTopic researchTopic(UserInput userInput) {
+        String prompt = userInput.getContent();
         log.info("Starting research for: {}", prompt);
         ResearchWorkflowState state = workflow.executeSync(prompt);
         return state.researchedTopic();
     }
 
-    @Action(inputType = ResearchedTopic.class, outputType = ExecutiveSummary.class,
-        systemPrompt = "Generate a comprehensive executive summary from the researched topic. Write for C-suite audience.",
-        id = "research-summarize")
-    @AchievesGoal
-    public ExecutiveSummary analyzeAndReport(ResearchedTopic researched, DefaultLlm ai) {
+    @Action(description = "Generate a comprehensive executive summary from the researched topic. Write for C-suite audience.")
+    @AchievesGoal(description = "Generate professional executive summary of the research topic")
+    public ExecutiveSummary analyzeAndReport(ResearchedTopic researched) {
         log.info("Generating executive summary for: {}", researched.topic());
         ResearchWorkflowState state = workflow.executeSync(researched.topic());
         if (state.publishedReport() != null)
