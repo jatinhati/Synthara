@@ -4,7 +4,7 @@ spring:
   ai:
     openai:
       base-url: https://openrouter.ai/api
-      api-key: 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
+      api-key: ${OPENROUTER_API_KEY}
       chat:
         options:
           model: nvidia/nemotron-3-nano-30b-a3b:free
@@ -18,7 +18,7 @@ spring:
                 - -y
                 - "tavily-mcp"
               env:
-                TAVILY_API_KEY: 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
+                TAVILY_API_KEY: ${TAVILY_API_KEY}
   datasource:
     url: jdbc:postgresql://localhost:5432/synthara_research
     username: ${DB_USERNAME:postgres}
