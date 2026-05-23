@@ -1,104 +1,168 @@
-# Blog Agent
+# Synthara Research Analyst
 
-An AI-powered blog post writer and reviewer built with Spring Boot and the [Embabel Agent Framework](https://repo.embabel.com). Give it a topic, and it researches, drafts, reviews, summarizes, and publishes a beginner-friendly blog post as Markdown — using both MCP-based and custom Java tools along the way.
+Synthara is an enterprise-grade AI research analyst platform that orchestrates a multi‑stage research workflow to produce executive-ready market intelligence. It combines Embabel’s agent framework with Spring Boot, tool‑augmented LLMs, semantic memory, and report export pipelines.
 
-## Quick Start
+## Key Features
 
-```bash
-export ANTHROPIC_API_KEY=your-anthropic-key
-export OPENAI_API_KEY=your-openai-key
-export BRAVE_API_KEY=your-brave-key
-./mvnw spring-boot:run
+- **Multi‑stage research workflow**: research → source extraction → competitor analysis → SWOT → executive summary → report generation → export → semantic memory storage.
+- **Tool‑augmented analysis** with custom LLM tools for:
+  - duplicate source detection
+  - source credibility scoring
+  - trend analysis
+  - citation formatting
+  - similarity search across prior research
+  - report export utilities
+- **Semantic memory** for storing and recalling prior research context.
+- **Report export** to Markdown and optional PDF (via Pandoc + XeLaTeX).
+- **Caching & progress tracking** backed by Redis.
+- **MCP-based web research** via the Brave Search MCP server.
+- **Containerized stack** with PostgreSQL + pgvector and Redis via Docker Compose.
+
+## Architecture Overview
+
+```
+User Input
+   │
+   ▼
+ResearchAnalystAgent (Embabel)
+   │
+   ▼
+ResearchWorkflow
+   ├─ ResearchTopicStage
+   ├─ SourceExtractionStage
+   ├─ CompetitorAnalysisStage
+   ├─ SwotAnalysisStage
+   ├─ ExecutiveSummaryStage
+   ├─ ReportGenerationStage
+   ├─ PdfExportStage
+   └─ SemanticMemoryStorageStage
+   │
+   ▼
+Outputs: Markdown/PDF report + semantic memory
 ```
 
-The app launches an interactive shell. Type `x "your topic"` and the agent will run a 5-stage pipeline producing a finished Markdown file in `blog-posts/`.
+### Core Modules
+
+| Module | Purpose |
+|---|---|
+| `dev.synthara.research.agents` | Embabel agent entry point (`ResearchAnalystAgent`) |
+| `dev.synthara.research.workflow` | Deterministic research pipeline and workflow state |
+| `dev.synthara.research.tools` | Custom `@LlmTool` utilities (credibility, trends, citations, export, similarity) |
+| `dev.synthara.research.memory` | Redis-backed caching and progress tracking |
+| `dev.synthara.research.vectorstore` | Semantic memory store (in‑memory placeholder) |
+| `dev.synthara.research.records` | Immutable record types for workflow data |
+
+## Workflow Stages
+
+1. **Research Topic** — gathers sources for the topic and synthesizes an initial summary.
+2. **Source Extraction** — deduplicates sources, filters low‑quality items, ranks by credibility.
+3. **Competitor Analysis** — builds competitive profiles and positioning.
+4. **SWOT Analysis** — generates strengths, weaknesses, opportunities, threats, and recommendation.
+5. **Executive Summary** — executive‑level narrative, findings, risks, opportunities.
+6. **Report Generation** — builds a structured Markdown report.
+7. **PDF Export** — optionally converts Markdown to PDF (requires Pandoc + XeLaTeX).
+8. **Semantic Storage** — stores key insights for future retrieval.
 
 ## Prerequisites
 
-- Java 23+
-- [Anthropic API key](https://console.anthropic.com/) — used by the default and reviewer LLMs (`claude-sonnet-4-6`, `claude-opus-4-6`)
-- [OpenAI API key](https://platform.openai.com/api-keys) — referenced by the platform config
-- [Brave Search API key](https://brave.com/search/api/) — used by the web research tool (free tier works)
-- Node.js / `npx` — required so the Brave Search MCP server can be launched
+- **Java 23**
+- **Maven** (or use `./mvnw` / `mvnw.cmd`)
+- **Node.js / npx** (for Brave Search MCP server)
+- **PostgreSQL + pgvector** (Docker Compose recommended)
+- **Redis**
+- **API keys**:
+  - `OPENAI_API_KEY`
+  - `ANTHROPIC_API_KEY`
+  - `BRAVE_API_KEY`
+
+## Quick Start (Local)
+
+```bash
+export OPENAI_API_KEY=your-openai-key
+export ANTHROPIC_API_KEY=your-anthropic-key
+export BRAVE_API_KEY=your-brave-key
+
+# Optional (if running Postgres/Redis locally)
+export DB_USERNAME=postgres
+export DB_PASSWORD=postgres
+export REDIS_PASSWORD=
+
+./mvnw spring-boot:run
+```
+
+## Quick Start (Docker)
+
+```bash
+docker compose up --build
+```
+
+This starts:
+- PostgreSQL + pgvector (`init-db.sh` enables the `vector` extension)
+- Redis
+- Synthara app on port **8080**
 
 ## Configuration
 
-Configuration lives in `src/main/resources/application.yaml`:
+Configuration is in `src/main/resources/application.yaml`.
+
+### Synthara Settings
 
 | Property | Default | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | — | Anthropic API key (env variable) |
-| `OPENAI_API_KEY` | — | OpenAI API key (env variable) |
-| `BRAVE_API_KEY` | — | Brave Search API key (env variable) |
-| `blog-agent.output-dir` | `blog-posts` | Directory where finished posts are saved |
-| `blog-agent.number-of-keywords` | `5` | Max keywords generated for front matter |
-| `embabel.models.default-llm` | `claude-sonnet-4-6` | Model used for drafting, research, TLDR, and front matter |
-| `embabel.models.llms.reviewer` | `claude-opus-4-6` | Model used for reviewing |
+| `synthara.research.output-dir` | `reports` | Report output directory |
+| `synthara.research.max-sources` | `50` | Maximum sources to retain |
+| `synthara.research.parallel-research` | `true` | Enable parallel execution |
+| `synthara.research.cache-ttl-hours` | `24` | Cache TTL (hours) |
 
-## How It Works
+### Data Stores
 
-The `BlogWriterAgent` defines a five-stage Embabel pipeline. Each stage is an `@Action` method whose input/output types let Embabel chain them automatically.
+| Property | Default | Description |
+|---|---|---|
+| `spring.datasource.url` | `jdbc:postgresql://localhost:5432/synthara_research` | Postgres connection |
+| `spring.data.redis.host` | `localhost` | Redis host |
+| `spring.data.redis.port` | `6379` | Redis port |
 
-1. **`researchTopic`** — Uses the LLM with `CoreToolGroups.WEB` (a tool group backed by the Brave Search MCP server) to research the topic on the web before any writing happens.
-2. **`writeDraft`** — Drafts a practical, beginner-friendly Markdown post using the research findings.
-3. **`reviewDraft`** — Sends the draft to a stronger reviewer LLM for technical editing and tighter writing.
-4. **`addTldr`** — Generates a one-or-two sentence TLDR and prepends it to the post.
-5. **`addFrontMatter`** — Uses the **`ReadingStatsTool`** (a custom Java `@LlmTool` component) to compute exact word count and read time, then generates YAML front matter (description, tags, keywords, readTime) and writes the finished file to disk.
+### MCP + LLM Models
 
-### Tool Use: Two Flavors
+| Property | Default | Description |
+|---|---|---|
+| `spring.ai.mcp.client.stdio.connections.brave-search-mcp` | — | Brave Search MCP config |
+| `embabel.models.default-llm` | `claude-sonnet-4-6` | Default LLM |
+| `embabel.models.llms.reviewer` | `claude-opus-4-6` | Reviewer LLM |
 
-This project demonstrates both ways to give an LLM tools in Embabel:
+## Outputs
 
-- **MCP tools** — `researchTopic` uses `.withToolGroup(CoreToolGroups.WEB)`. Embabel resolves this against the Brave Search MCP server configured under `spring.ai.mcp.client.stdio.connections` in `application.yaml`. The MCP server is launched on demand via `npx`.
-- **Custom Java tools** — `ReadingStatsTool` is a plain Spring `@Component` with one method annotated `@LlmTool`. The `addFrontMatter` action wires it in with `.withToolObject(readingStatsTool)`. No MCP, no external service — just Java.
+- **Markdown report** written to `reports/`.
+- **PDF report** generated when Pandoc + XeLaTeX are available.
+- **Semantic memory** stored for similarity retrieval (currently in‑memory; ready for pgvector integration).
 
-Both approaches surface to the LLM as standard tool calls; the LLM decides when to invoke them.
+## Tooling & LLM Utilities
 
-## Shell Commands
+Synthara exposes a suite of `@LlmTool` utilities for richer analysis:
 
-The app runs in an interactive Spring Shell. Type `help` to see all available commands. Here are the most useful ones:
+- **DuplicateSourceDetectorTool** — dedupe and similarity checks
+- **SourceCredibilityTool** — credibility scoring (0–100)
+- **TrendAnalysisTool** — trend and signal analysis
+- **CitationFormatterTool** — APA/MLA citation formatting
+- **SimilaritySearchTool** — semantic search of past reports
+- **ReportExportTool** — export Markdown files
 
-| Command | Description |
-|---|---|
-| `x <topic>` | Execute the agent with a given topic (e.g., `x "Getting started with Spring Boot"`) |
-| `x -p <topic>` | Execute and print the exact prompts sent to the LLM |
-| `agents` | List all available agents |
-| `actions` | List all available actions agents can perform |
-| `goals` | List all available goals |
-| `models` | List available language models |
-| `blackboard` / `bb` | Show the last blackboard state (working memory from the previous run) |
-| `clear` | Clear the blackboard |
-| `runs` | Show recent agent runs with cost information |
-| `chat` | Start an interactive chat session |
-| `platform` | Show information about the AgentPlatform |
-| `help` | Show all available commands |
+## Development & Testing
 
-The `-p` flag on `x` is especially useful for debugging — it shows you exactly what prompts are being sent to each LLM in the pipeline.
+Run tests with:
 
-## What's Next
+```bash
+./mvnw test
+```
 
-Ideas for expanding the pipeline with additional actions:
+> Note: builds require access to the Embabel snapshot repository (`https://repo.embabel.com/artifactory/libs-snapshot`).
 
-**Content Creation**
-- **Write a catchy title** — Generate multiple title options and pick the strongest one
-- **Write a hook** — Craft an engaging opening paragraph that pulls readers in
+## Troubleshooting
 
-**SEO & Discovery**
-- **Write social media posts** — Generate Twitter/LinkedIn snippets to promote the article
+- **PDF export missing**: install `pandoc` and `xelatex`.
+- **Dependency resolution failures**: ensure `repo.embabel.com` is reachable.
+- **Brave Search errors**: verify `BRAVE_API_KEY` and `npx` availability.
 
-**Quality & Polish**
-- **Fact checker** — Verify technical claims against known sources (great fit for another tool!)
-- **Readability scorer** — Evaluate reading level and suggest simplifications
+## License
 
-**Publishing Pipeline**
-- **Create outline first** — Generate a structured outline before drafting to steer direction
-- **Thumbnail prompt generator** — Write an image generation prompt for a hero image
-
-Because Embabel resolves action order from input/output types, new actions can be chained into the pipeline simply by declaring the right types (e.g., `DraftPost → TitledDraft → SEOEnrichedPost → ReviewedPost`).
-
-## Tech Stack
-
-- Spring Boot 3.5
-- Embabel Agent Framework 0.4.0
-- Spring AI 1.1.4
-- Java 23
+This project is provided as-is. Add your preferred license here.
