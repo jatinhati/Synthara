@@ -1,6 +1,6 @@
 # Explain Cloud architecture and security  
 
-**Research Report** | May 23, 2026  
+**Research Report** | May 31, 2026  
 
 ## Executive Summary  Tamnoon.io’s AI‑driven threat detection and Zero‑Trust automation, combined with GuidePoint Security’s consulting depth, deliver a differentiated SaaS offering for mid‑market enterprises undergoing hybrid‑cloud migration. The partnership accelerates compliance requirements and reduces total cost of ownership, positioning the solution to capture emerging market demand while mitigating competitive and regulatory pressures.  
 

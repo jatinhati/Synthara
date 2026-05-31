@@ -35,18 +35,25 @@ public class ExecutiveSummaryStage {
         );
 
         String prompt = String.format(
-            "You are a C-suite executive briefing specialist. Based on the following strategic SWOT analysis of the topic '%s', write a high-impact executive summary and briefing profile.\n\n" +
+            "You are a C-suite executive briefing specialist. Based on the following strategic SWOT analysis of the topic '%s', " +
+            "write a high-impact, data-rich executive summary and briefing profile.\n\n" +
             "SWOT Data:\n%s\n\n" +
             "Output a strictly valid JSON object matching the schema below. " +
             "DO NOT include any explanation or intro text. Only output the JSON object. Do not wrap in markdown code blocks.\n\n" +
+            "REQUIREMENTS: majorFindings must have AT LEAST 5 specific, evidence-based findings. " +
+            "strategicInsights must have AT LEAST 5 actionable insights. " +
+            "risks must have AT LEAST 4 specific risks. " +
+            "opportunities must have AT LEAST 4 concrete opportunities. " +
+            "Each item should be a full sentence (not a fragment). " +
+            "summary must be 4-5 sentences long.\n\n" +
             "JSON Schema:\n" +
             "{\n" +
-            "  \"summary\": \"A high-impact executive summary paragraph (3-4 sentences)\",\n" +
-            "  \"majorFindings\": [\"Major finding A\", \"Major finding B\"],\n" +
-            "  \"strategicInsights\": [\"Strategic insight A\", \"Strategic insight B\"],\n" +
-            "  \"risks\": [\"Risk A\", \"Risk B\"],\n" +
-            "  \"opportunities\": [\"Opportunity A\", \"Opportunity B\"],\n" +
-            "  \"futureOutlook\": \"A forward-looking projection on where this is going (2-3 sentences)\",\n" +
+            "  \"summary\": \"A high-impact executive summary (4-5 sentences covering market state, key drivers, investment climate, challenges, and strategic imperative)\",\n" +
+            "  \"majorFindings\": [\"Specific major finding A with data/context\", \"Specific major finding B\", \"C\", \"D\", \"E\"],\n" +
+            "  \"strategicInsights\": [\"Actionable strategic insight A\", \"B\", \"C\", \"D\", \"E\"],\n" +
+            "  \"risks\": [\"Specific risk A with context\", \"B\", \"C\", \"D\"],\n" +
+            "  \"opportunities\": [\"Concrete opportunity A with rationale\", \"B\", \"C\", \"D\"],\n" +
+            "  \"futureOutlook\": \"A forward-looking projection (3-4 sentences covering 3-5 year horizon, technology shifts, and market evolution)\",\n" +
             "  \"confidenceScore\": 85\n" +
             "}",
             swot.topic(), swotText

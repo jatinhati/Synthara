@@ -1,5 +1,14 @@
 # Custom openai-models.yml overriding Embabel default whitelist to register OpenRouter free model
 models:
+  - name: "stepfun-ai/step-3.7-flash"
+    model_id: "stepfun-ai/step-3.7-flash"
+    display_name: "Step 3.7 Flash (NVIDIA NIM)"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.0
+      usd_per1m_output_tokens: 0.0
+
   - name: "nvidia-nemotron-3-nano-30b-a3b-free"
     model_id: "nvidia/nemotron-3-nano-30b-a3b:free"
     display_name: "Nvidia Nemotron 3 Free"

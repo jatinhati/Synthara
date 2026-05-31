@@ -1,29 +1,33 @@
+kind: Application
 spring:
   application:
     name: synthara-research
   ai:
     openai:
-      base-url: https://openrouter.ai/api
-      api-key: ${OPENROUTER_API_KEY}
+      base-url: ${NVIDIA_NIM_BASE_URL:https://integrate.api.nvidia.com}
+      api-key: ${NVIDIA_NIM_API_KEY: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}
       chat:
         options:
-          model: nvidia/nemotron-3-nano-30b-a3b:free
+          model: ${NVIDIA_NIM_MODEL:stepfun-ai/step-3.7-flash}
     mcp:
       client:
         stdio:
           connections:
             tavily-search-mcp:
-              command: npx.cmd
+              command: ${TAVILY_MCP_COMMAND:npx}
               args:
                 - -y
                 - "tavily-mcp"
               env:
-                TAVILY_API_KEY: ${TAVILY_API_KEY}
+                TAVILY_API_KEY: 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
   datasource:
-    url: jdbc:postgresql://localhost:5432/synthara_research
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/synthara_research
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 10000
+      maximum-pool-size: 5
   jpa:
     hibernate:
       ddl-auto: update
@@ -52,13 +56,15 @@ synthara:
 embabel:
   agent:
     logging:
-      personality: professional
+      personality: colossus
     platform:
       models:
         openai:
-          api-key: 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
-          base-url: https://openrouter.ai/api
+          api-key: ${NVIDIA_NIM_API_KEY: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}
+          base-url: ${NVIDIA_NIM_BASE_URL:https://integrate.api.nvidia.com}
   models:
-    default-llm: "nvidia/nemotron-3-nano-30b-a3b:free"
+    default-llm: stepfun-ai/step-3.7-flash
     llms:
-      reviewer: "nvidia/nemotron-3-nano-30b-a3b:free"
+      reviewer: stepfun-ai/step-3.7-flash
+
+

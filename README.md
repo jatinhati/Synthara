@@ -70,17 +70,18 @@ Outputs: Markdown/PDF report + semantic memory
 - **Node.js / npx** (for Brave Search MCP server)
 - **PostgreSQL + pgvector** (Docker Compose recommended)
 - **Redis**
+- **Ollama** running locally at `http://localhost:11434`
 - **API keys**:
-  - `OPENAI_API_KEY`
   - `ANTHROPIC_API_KEY`
   - `BRAVE_API_KEY`
 
 ## Quick Start (Local)
 
 ```bash
-export OPENAI_API_KEY=your-openai-key
 export ANTHROPIC_API_KEY=your-anthropic-key
 export BRAVE_API_KEY=your-brave-key
+export OLLAMA_BASE_URL=http://localhost:11434/api
+export OLLAMA_MODEL=llama3.1:8b
 
 # Optional (if running Postgres/Redis locally)
 export DB_USERNAME=postgres
@@ -127,8 +128,8 @@ Configuration is in `src/main/resources/application.yaml`.
 | Property | Default | Description |
 |---|---|---|
 | `spring.ai.mcp.client.stdio.connections.brave-search-mcp` | — | Brave Search MCP config |
-| `embabel.models.default-llm` | `claude-sonnet-4-6` | Default LLM |
-| `embabel.models.llms.reviewer` | `claude-opus-4-6` | Reviewer LLM |
+| `embabel.models.default-llm` | `llama3.1:8b` | Default LLM |
+| `embabel.models.llms.reviewer` | `llama3.1:8b` | Reviewer LLM |
 
 ## Outputs
 
@@ -481,11 +482,11 @@ Immutable data containers representing workflow state:
 
 ### External Services
 
-#### OpenAI & Anthropic LLMs
-- Default: Claude Sonnet 4.6
-- Reviewer: Claude Opus 4.6
-- Configured via Spring AI
-- API keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
+#### Ollama & Anthropic LLMs
+- Default: Ollama `llama3.1:8b`
+- Reviewer: Ollama `llama3.1:8b`
+- Configured via Spring AI-compatible properties
+- API keys: `ANTHROPIC_API_KEY` (Ollama can run without an API key)
 
 #### Brave Search MCP
 - Web search integration via Model Context Protocol (MCP)
@@ -536,7 +537,7 @@ Recommended Kubernetes setup:
 ├─ StatefulSet: PostgreSQL with pgvector
 ├─ StatefulSet: Redis
 ├─ ConfigMap: application.yaml
-├─ Secret: API keys (OPENAI_API_KEY, etc.)
+├─ Secret: API keys (ANTHROPIC_API_KEY, etc.)
 └─ Service: Synthara (LoadBalancer)
 ```
 

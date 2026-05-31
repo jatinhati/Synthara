@@ -32,25 +32,29 @@ public class SwotAnalysisStage {
             .collect(Collectors.joining("\n"));
 
         String prompt = String.format(
-            "You are a strategic management consultant. Perform a SWOT analysis for the market and technology context of the topic '%s'.\n\n" +
+            "You are a strategic management consultant. Perform a deeply detailed SWOT analysis for the market and technology context of the topic '%s'.\n\n" +
             "Competitors Context:\n%s\n\n" +
-            "Generate a highly detailed SWOT analysis and strategic recommendation. Output a strictly valid JSON object matching the schema below. " +
+            "Generate a comprehensive, evidence-backed SWOT analysis. Output a strictly valid JSON object matching the schema below. " +
             "DO NOT include any explanation or intro text. Only output the JSON object. Do not wrap in markdown code blocks.\n\n" +
+            "REQUIREMENTS: Each quadrant (strengths, weaknesses, opportunities, threats) must have AT LEAST 5 items. " +
+            "Each item's 'description' must be a complete, specific sentence — not a vague fragment. " +
+            "'evidence' must cite specific context, real-world examples, or data points. " +
+            "strategicRecommendation must be 3-4 sentences.\n\n" +
             "JSON Schema:\n" +
             "{\n" +
             "  \"strengths\": [\n" +
-            "    { \"description\": \"Strength description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "    { \"description\": \"Specific strength as a complete sentence\", \"evidence\": \"Concrete evidence or real-world example\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
             "  ],\n" +
             "  \"weaknesses\": [\n" +
-            "    { \"description\": \"Weakness description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "    { \"description\": \"Specific weakness as a complete sentence\", \"evidence\": \"Concrete evidence or real-world example\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
             "  ],\n" +
             "  \"opportunities\": [\n" +
-            "    { \"description\": \"Opportunity description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "    { \"description\": \"Specific opportunity as a complete sentence\", \"evidence\": \"Concrete evidence or real-world example\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
             "  ],\n" +
             "  \"threats\": [\n" +
-            "    { \"description\": \"Threat description\", \"evidence\": \"Evidence/justification\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
+            "    { \"description\": \"Specific threat as a complete sentence\", \"evidence\": \"Concrete evidence or real-world example\", \"impact\": \"HIGH/MEDIUM/LOW\", \"category\": \"market/technology/regulatory\" }\n" +
             "  ],\n" +
-            "  \"strategicRecommendation\": \"Specific strategic recommendation to gain competitive advantage\"\n" +
+            "  \"strategicRecommendation\": \"Detailed 3-4 sentence strategic recommendation with specific action items and rationale\"\n" +
             "}",
             competitorAnalysis.topic(), competitorsText
         );
